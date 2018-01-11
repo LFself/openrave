@@ -2163,7 +2163,7 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                 
             psubs = []
             for i in range(12):
-                psubs.append((self.pvars[i],T[i].subs(varsubs).subs(self.globalsymbols.items()+valsubs)))
+                psubs.append((self.pvars[i],T[i].subs(varsubs).subs(self.globalsymbols).subs(valsubs)))
             for s,v in self.ppsubs+self.npxyzsubs+self.rxpsubs:
                 psubs.append((s,v.subs(psubs)))
                 
@@ -7746,7 +7746,7 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
     
     def _SubstituteGlobalSymbols(self, eq, globalsymbols = None):
         if globalsymbols is None:
-            globalsymbols = self.globalsymbols.items()
+            globalsymbols = self.globalsymbols
         preveq = eq
         neweq = preveq.subs(globalsymbols)
         while preveq != neweq:
@@ -7828,8 +7828,7 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                                                currentcasesubs = currentcasesubs, \
                                                unknownvars = unknownvars)
 
-        originalGlobalSymbols_dict = self.globalsymbols
-        originalGlobalSymbols = self.globalsymbols.items()
+        originalGlobalSymbols = self.globalsymbols
         # all solutions have check for zero equations
         # choose the variable with the shortest solution and compute (this is a conservative approach)
         usedsolutions = []
@@ -8257,7 +8256,7 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                                                         zerobranch = prevbranch,anycondition = True, \
                                                         thresh = solution.GetZeroThreshold())
                 # have to transfer the dictionary!
-                solvercheckzeros.dictequations = originalGlobalSymbols + solution.dictequations                    
+                solvercheckzeros.dictequations = originalGlobalSymbols.items() + solution.dictequations                    
                 solvercheckzeros.equationsused = AllEquations
                 solution.dictequations = []
                 prevbranch=[solvercheckzeros]
@@ -8286,7 +8285,6 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                                               varlist, \
                                               othersolvedvars, \
                                               solsubs, \
-                                              originalGlobalSymbols, \
                                               endbranchtree))
 
             return prevbranch
@@ -8635,7 +8633,7 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                                     extradictequations.append((s, neweq))
                                     self._AddToGlobalSymbols(s, neweq)
                                     
-                            for var, eq in chain(originalGlobalSymbols, dictequations):
+                            for var, eq in chain(originalGlobalSymbols.items(), dictequations):
                                 neweq = eq.subs(othervarsubs)
                                 if not self.isValidSolution(neweq):
                                     raise self.CannotSolveError(('equation %s is invalid ' + \
@@ -8690,7 +8688,7 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                 continue
             finally:
                 # restore the global symbols
-                self.globalsymbols = originalGlobalSymbols_dict
+                self.globalsymbols = originalGlobalSymbols
 
         if len(zerobranches) > 0:
             branchconds = AST.SolverBranchConds(zerobranches + \
@@ -8700,7 +8698,6 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                                                                     for var, eq in currentcasesubs], \
                                                                    othersolvedvars, \
                                                                    solsubs, \
-                                                                   originalGlobalSymbols, \
                                                                    endbranchtree)], \
                                                 [])])
             branchconds.accumequations = accumequations
@@ -8712,7 +8709,6 @@ inv(A) = [ r02  r12  r22  npz ]    [ 2  5  8  14 ]
                                                for var, eq in currentcasesubs], \
                                               othersolvedvars, \
                                               solsubs, \
-                                              originalGlobalSymbols, \
                                               endbranchtree))
             
         return prevbranch
@@ -11919,18 +11915,18 @@ class AST:
         solsubs         = None # the substitutions of the solved variables
         endbranchtree   = None # a node that points to the end of the tree
         
-        def __init__(self, comment, \
+        def __init__(self, \
+                     comment, \
                      varsubs = list(), \
                      othersolvedvars = list(), \
                      solsubs = list(), \
-                     globalsymbols = list(), \
                      endbranchtree = None):
             
-            self.comment = comment
-            self.varsubs = list(varsubs)
+            self.comment         = comment
+            self.varsubs         = list(varsubs)
             self.othersolvedvars = list(othersolvedvars)
-            self.solsubs = list(solsubs)
-            self.endbranchtree = endbranchtree
+            self.solsubs         = list(solsubs)
+            self.endbranchtree   = endbranchtree
             
         def generate(self,generator):
             return generator.generateBreak(self)
